@@ -1,0 +1,30 @@
+{
+  "name": "kilic-insaat-teklif",
+  "version": "1.0.0",
+  "description": "Kılıç İnşaat Mimari Kesit ve Fiyat Teklifi Üretici",
+  "main": "server.js",
+  "bin": "dist/index.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js",
+    "build": "npx ncc build server.js -o dist && xcopy /E /I /Y public dist\\public && npx pkg package.json --targets node18-win-x64 --output C:/Users/robink/Desktop/Kilic_Insaat.exe"
+  },
+  "pkg": {
+    "assets": [
+      "dist/**/*",
+      "dist/public/**/*"
+    ]
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "docx": "^9.7.1",
+    "express": "^4.18.2",
+    "pdfkit": "^0.14.0",
+    "sharp": "^0.35.3",
+    "svg-to-pdfkit": "*",
+    "uuid": "^9.0.1"
+  },
+  "devDependencies": {
+    "@vercel/ncc": "^0.44.0"
+  }
+}

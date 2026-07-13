@@ -1,0 +1,806 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Teknik Çizim ve Teklif Oluşturucu</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    <script src="/drawingEngine.js"></script>
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+        svg { max-width: 100%; height: auto; }
+        .tab-btn.active { border-bottom-color: #2563eb; color: #2563eb; }
+        .hidden-tab { display: none !important; }
+    </style>
+</head>
+<body class="bg-gray-50 text-gray-800 h-screen flex flex-col overflow-hidden">
+
+    <!-- Header & Tabs -->
+    <header class="bg-white border-b border-gray-200 px-6 pt-4 flex-shrink-0">
+        <div class="flex justify-between items-center mb-4">
+            <div>
+                <h1 class="text-2xl font-bold text-gray-900">Mimari Kesit & Teklif Üretici</h1>
+                <p class="text-gray-500 text-sm">Mimari parametreleri girin, anlık SVG izleyin veya Maliyet Analizi yapın.</p>
+            </div>
+            <!-- Action Buttons will be contextual -->
+            <button id="submitArchBtn" class="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-6 rounded-lg shadow-sm transition duration-200 flex items-center">
+                <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                Mimari Çizim PDF
+            </button>
+            <button id="submitProposalBtn" class="hidden bg-green-600 hover:bg-green-700 text-white font-medium py-2 px-6 rounded-lg shadow-sm transition duration-200 flex items-center">
+                <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                Teklif PDF Oluştur
+            </button>
+            <button id="submitProposalDocxBtn" class="hidden bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-6 ml-4 rounded-lg shadow-sm transition duration-200 flex items-center">
+                <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                Teklif Word Oluştur
+            </button>
+        </div>
+        
+        <div class="flex space-x-8">
+            <button class="tab-btn active pb-2 px-1 border-b-2 border-transparent font-medium text-gray-600 hover:text-blue-600 transition" onclick="switchTab('arch')">Mimari Çizim</button>
+            <button class="tab-btn pb-2 px-1 border-b-2 border-transparent font-medium text-gray-600 hover:text-blue-600 transition" onclick="switchTab('proposal')">Alan Analizi & Teklif</button>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <div class="flex-1 overflow-hidden relative">
+
+        <!-- TAB 1: ARCHITECTURE -->
+        <div id="tab-arch" class="w-full h-full flex">
+            <!-- Left Panel: Form -->
+            <div class="w-1/3 min-w-[400px] bg-white border-r border-gray-200 overflow-y-auto p-6 shadow-inner" id="formPanel">
+                <form id="drawingForm" class="space-y-6">
+                    
+                    <!-- Genel Ayarlar -->
+                    <div class="space-y-4">
+                        <h2 class="text-lg font-semibold text-gray-800 border-b pb-2">Genel Ayarlar</h2>
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Çatı Tipi</label>
+                                <select id="roofType" class="form-trigger w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition text-sm">
+                                    <option value="Kırma">Kırma Çatı</option>
+                                    <option value="Beşik">Beşik Çatı</option>
+                                    <option value="Tek Yüzeyli">Tek Yüzeyli Çatı</option>
+                                    <option value="Mansard">Mansard Çatı</option>
+                                    <option value="Düz">Düz/Teras Çatı</option>
+                                </select>
+                            </div>
+                            <div class="flex items-center mt-6">
+                                <input type="checkbox" id="isDuplex" class="form-trigger h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded">
+                                <label for="isDuplex" class="ml-2 block text-sm font-medium text-gray-700">Çatı Dubleks mi?</label>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Kat Sayısı</label>
+                                <input type="number" id="floorCount" min="1" value="2" class="form-trigger w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition text-sm">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Bodrum Kat Sayısı</label>
+                                <input type="number" id="basementCount" min="0" value="0" class="form-trigger w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition text-sm">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Otopark Kat Sayısı</label>
+                                <input type="number" id="parkingCount" min="0" value="0" class="form-trigger w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition text-sm">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Otopark Alanı (m²)</label>
+                                <input type="number" id="parkingArea" min="1" value="100" class="form-trigger w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition text-sm">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Çatı Detayları -->
+                    <div class="space-y-4">
+                        <h2 class="text-lg font-semibold text-gray-800 border-b pb-2">Çatı Detayları</h2>
+                        <div class="bg-gray-50 p-4 rounded-lg border border-gray-200">
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Çatıdaki Daire/Bölüm Sayısı</label>
+                            <input type="number" id="roofAptCount" min="0" value="0" class="form-trigger w-full px-3 py-2 border border-gray-300 rounded-lg mb-3 focus:ring-2 focus:ring-blue-500 outline-none transition text-sm">
+                            <div id="roofAreasContainer" class="grid grid-cols-2 gap-2"></div>
+                        </div>
+                    </div>
+
+                    <!-- Kat Detayları -->
+                    <div class="space-y-4">
+                        <h2 class="text-lg font-semibold text-gray-800 border-b pb-2">Normal Katlar</h2>
+                        <div id="floorsContainer" class="space-y-3"></div>
+                    </div>
+
+                    <!-- Bodrum Detayları -->
+                    <div class="space-y-4">
+                        <h2 class="text-lg font-semibold text-gray-800 border-b pb-2">Bodrum Katlar</h2>
+                        <div id="basementsContainer" class="space-y-3"></div>
+                    </div>
+
+                </form>
+            </div>
+
+            <!-- Right Panel: Preview -->
+            <div class="flex-1 bg-gray-100 flex flex-col p-6 overflow-hidden">
+                <h2 class="text-lg font-semibold text-gray-600 mb-4 flex-shrink-0">Canlı Önizleme</h2>
+                <div class="flex-1 bg-white rounded-xl shadow-md border border-gray-200 overflow-auto p-4">
+                    <div id="previewContainer" class="w-full h-full flex flex-col items-center">
+                        <!-- SVG buraya gelecek -->
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- TAB 2: PROPOSAL -->
+        <div id="tab-proposal" class="hidden-tab w-full h-full bg-gray-50 overflow-y-auto p-6">
+            <div class="max-w-6xl mx-auto bg-white rounded-xl shadow-md border border-gray-200 p-6">
+                
+                <div class="grid grid-cols-3 gap-6 mb-8">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Müşteri / Firma Adı</label>
+                        <input type="text" id="customerName" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition" placeholder="Örn: Ahmet Yılmaz">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Proje Adı</label>
+                        <input type="text" id="projectName" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition" placeholder="Örn: X Sitesi Kentsel Dönüşüm">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Tarih</label>
+                        <input type="date" id="proposalDate" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition">
+                    </div>
+                </div>
+
+                <!-- Sözleşme ve Arsa Bilgileri -->
+                <div class="bg-yellow-50 p-4 rounded-lg border border-yellow-200 mb-8 space-y-4">
+                    <h3 class="text-sm font-bold text-yellow-800 uppercase border-b border-yellow-200 pb-2">Sözleşme ve Arsa Bilgileri</h3>
+                    <div class="grid grid-cols-4 gap-4">
+                        <div>
+                            <label class="block text-xs font-medium text-gray-700 mb-1">İlçe</label>
+                            <input type="text" id="propIlce" class="w-full px-2 py-1 border border-gray-300 rounded focus:ring-2 focus:ring-yellow-500 outline-none transition" placeholder="Şişli">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-gray-700 mb-1">Ada</label>
+                            <input type="text" id="propAda" class="w-full px-2 py-1 border border-gray-300 rounded focus:ring-2 focus:ring-yellow-500 outline-none transition" placeholder="1234">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-gray-700 mb-1">Parsel</label>
+                            <input type="text" id="propParsel" class="w-full px-2 py-1 border border-gray-300 rounded focus:ring-2 focus:ring-yellow-500 outline-none transition" placeholder="5">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-gray-700 mb-1">Teslim Türü</label>
+                            <input type="text" id="propTeslim" class="w-full px-2 py-1 border border-gray-300 rounded focus:ring-2 focus:ring-yellow-500 outline-none transition" value="ANAHTAR TESLİM">
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-3 gap-4">
+                        <div>
+                            <label class="block text-xs font-medium text-gray-700 mb-1">İnşaat Süresi (Ay)</label>
+                            <input type="number" id="propInsaatSure" class="w-full px-2 py-1 border border-gray-300 rounded focus:ring-2 focus:ring-yellow-500 outline-none transition" value="18">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-gray-700 mb-1">Ruhsat Alım Süresi (Ay)</label>
+                            <input type="number" id="propRuhsatSure" class="w-full px-2 py-1 border border-gray-300 rounded focus:ring-2 focus:ring-yellow-500 outline-none transition" value="3">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-gray-700 mb-1">Gecikme Cezası (Aylık TL)</label>
+                            <input type="number" id="propCeza" class="w-full px-2 py-1 border border-gray-300 rounded focus:ring-2 focus:ring-yellow-500 outline-none transition" value="15000">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Ödeme Şartları -->
+                <div class="bg-purple-50 p-4 rounded-lg border border-purple-200 mb-8 space-y-4">
+                    <h3 class="text-sm font-bold text-purple-800 uppercase border-b border-purple-200 pb-2">Ödeme Şartları</h3>
+                    <div class="grid grid-cols-4 gap-4">
+                        <div>
+                            <label class="block text-xs font-medium text-gray-700 mb-1">Taksit Sayısı</label>
+                            <input type="number" id="propTaksitSayisi" class="w-full px-2 py-1 border border-gray-300 rounded focus:ring-2 focus:ring-purple-500 outline-none transition" value="6">
+                        </div>
+                        <div class="col-span-2">
+                            <label class="block text-xs font-medium text-gray-700 mb-1">Kampanya Türü</label>
+                            <select id="propKampanyaTuru" class="w-full px-2 py-1 border border-gray-300 rounded focus:ring-2 focus:ring-purple-500 outline-none transition">
+                                <option value="Yarısı Bizden">Yarısı Bizden</option>
+                                <option value="Düşük Faizli / Kar Payı Destekli Dönüşüm Kredileri">Düşük Faizli / Kar Payı Destekli Dönüşüm Kredileri</option>
+                                <option value="Kat Karşılığı">Kat Karşılığı</option>
+                                <option value="Belediyelerin Yerel Dönüşüm">Belediyelerin Yerel Dönüşüm</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-4 gap-4">
+                        <div>
+                            <label class="block text-xs font-medium text-gray-700 mb-1">İlk Taksit (İş Günü)</label>
+                            <input type="number" id="propIlkTaksitGun" class="w-full px-2 py-1 border border-gray-300 rounded focus:ring-2 focus:ring-purple-500 outline-none transition" value="3">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-gray-700 mb-1">Taksit Haftası</label>
+                            <select id="propTaksitHaftasi" class="w-full px-2 py-1 border border-gray-300 rounded focus:ring-2 focus:ring-purple-500 outline-none transition">
+                                <option value="ilk">İlk</option>
+                                <option value="ikinci">İkinci</option>
+                                <option value="üçüncü">Üçüncü</option>
+                                <option value="son">Son</option>
+                                <option value="ödemesiz">Ödemesiz</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-4 gap-4 mb-4 p-4 bg-blue-50 rounded-lg border border-blue-100">
+                    <div>
+                        <label class="block text-xs font-medium text-gray-700 mb-1">Daire Birim Fiyat (TL/m²)</label>
+                        <input type="number" id="daireUnitPrice" value="32000" oninput="calculateProposalTable()" class="w-full px-2 py-1 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 outline-none transition font-semibold text-blue-700">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-gray-700 mb-1">Dükkan Birim Fiyat (TL/m²)</label>
+                        <input type="number" id="dukkanUnitPrice" value="35000" oninput="calculateProposalTable()" class="w-full px-2 py-1 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 outline-none transition font-semibold text-blue-700">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-gray-700 mb-1">Sığınak/Teknik (TL/m²)</label>
+                        <input type="number" id="bodrumUnitPrice" value="15000" oninput="calculateProposalTable()" class="w-full px-2 py-1 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 outline-none transition font-semibold text-blue-700">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-gray-700 mb-1">Otopark Birim Fiyat (TL/m²)</label>
+                        <input type="number" id="otoparkUnitPrice" value="12000" oninput="calculateProposalTable()" class="w-full px-2 py-1 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 outline-none transition font-semibold text-blue-700">
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-6 mb-6 p-4 bg-blue-50 rounded-lg border border-blue-100">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">KDV Oranı</label>
+                        <select id="vatRate" onchange="calculateProposalTable()" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition">
+                            <option value="-1">KDV DAHİL</option>
+                            <option value="0">KDV Hariç (%0)</option>
+                            <option value="1">KDV Eklenecek (%1)</option>
+                            <option value="10">KDV Eklenecek (%10)</option>
+                            <option value="20">KDV Eklenecek (%20)</option>
+                        </select>
+                    </div>
+                    <div class="flex items-end">
+                        <button onclick="generateProposalTable()" class="w-full bg-blue-100 hover:bg-blue-200 text-blue-700 font-medium py-2 px-4 rounded-lg transition duration-200">
+                            Tabloyu Mimariden Güncelle
+                        </button>
+                    </div>
+                </div>
+
+                <div class="overflow-x-auto">
+                    <table class="w-full text-sm text-left text-gray-600 border border-gray-200">
+                        <thead class="text-xs text-gray-700 uppercase bg-gray-100 border-b">
+                            <tr>
+                                <th class="px-3 py-3 w-24">Kat / Nitelik</th>
+                                <th class="px-3 py-3 w-20">Bölüm No</th>
+                                <th class="px-3 py-3 w-24">Brüt Alan (m²)</th>
+                                <th class="px-3 py-3 w-24">Sığınak ve Teknik Hacimler (BODRUM) Payı (m²)</th>
+                                <th class="px-3 py-3 w-28 bg-blue-50 text-blue-800">Toplam Brüt Alan (m²)</th>
+                                <th class="px-3 py-3">İnşaat Bedeli (TL)</th>
+                                <th class="px-3 py-3">Sığınak ve Teknik Hacimler (BODRUM) Bedeli (TL)</th>
+                                <th class="px-3 py-3 bg-green-50 text-green-800">Toplam İnşaat Bedeli (TL)</th>
+                                <th class="px-3 py-3">Devlet Desteği (TL)</th>
+                                <th class="px-3 py-3">Ödenecek Tutar (TL)</th>
+                            </tr>
+                        </thead>
+                        <tbody id="proposalTbody" class="divide-y divide-gray-200">
+                            <!-- JS ile doldurulacak -->
+                        </tbody>
+                        <tfoot class="bg-gray-50 font-semibold text-gray-900 border-t-2 border-gray-300">
+                            <tr>
+                                <td colspan="2" class="px-3 py-3 text-right">TOPLAM:</td>
+                                <td id="totBrut" class="px-3 py-3">0</td>
+                                <td id="totBodrum" class="px-3 py-3">0</td>
+                                <td id="totToplamBrut" class="px-3 py-3 bg-blue-50 font-bold text-blue-700">0</td>
+                                <td id="totBedel" class="px-3 py-3">0 TL</td>
+                                <td id="totBodrumBedelTablo" class="px-3 py-3">0 TL</td>
+                                <td id="totToplamInsaatBedeli" class="px-3 py-3 bg-green-50 font-bold text-green-700">0 TL</td>
+                                <td id="totDestek" class="px-3 py-3">0 TL</td>
+                                <td id="totOdenecek" class="px-3 py-3 text-blue-600">0 TL</td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+
+                <!-- Sonuç Toplamları -->
+                <div class="mt-6 overflow-x-auto">
+                    <div class="flex justify-end">
+                        <div style="min-width:280px; max-width:360px" class="bg-gray-50 p-4 rounded-lg border border-gray-200 space-y-2 text-right">
+                            <div class="flex justify-between text-sm gap-4">
+                                <span class="text-gray-600 whitespace-nowrap">Bölümler (Daire/Dükkan) Toplamı:</span>
+                                <span id="subTotalSpan" class="font-medium whitespace-nowrap">0 TL</span>
+                            </div>
+                            <div class="flex justify-between text-sm gap-4">
+                                <span class="text-gray-600 whitespace-nowrap">Otopark Bedeli:</span>
+                                <span id="otoparkTotalSpan" class="font-medium whitespace-nowrap">0 TL</span>
+                            </div>
+                            <div class="flex justify-between text-sm gap-4 border-t pt-2">
+                                <span class="text-gray-600 whitespace-nowrap">Ara Toplam (Ödenecek):</span>
+                                <span id="araToplamSpan" class="font-medium whitespace-nowrap">0 TL</span>
+                            </div>
+                            <div class="flex justify-between text-sm gap-4">
+                                <span class="text-gray-600 whitespace-nowrap">KDV Tutarı:</span>
+                                <span id="vatTotalSpan" class="font-medium whitespace-nowrap">0 TL</span>
+                            </div>
+                            <div class="flex justify-between text-lg font-bold border-t pt-2 mt-2 gap-4">
+                                <span class="text-gray-900 whitespace-nowrap">Genel Toplam:</span>
+                                <span id="grandTotalSpan" class="text-green-600 whitespace-nowrap">0 TL</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
+        <!-- Bildirimler -->
+        <div id="statusMessage" class="absolute bottom-10 left-1/2 transform -translate-x-1/2 bg-green-100 text-green-800 px-4 py-2 rounded-lg shadow-lg text-sm font-medium transition-opacity duration-300 opacity-0 pointer-events-none z-50">
+            PDF başarıyla oluşturuldu ve indiriliyor!
+        </div>
+        <div id="errorMessage" class="absolute bottom-10 left-1/2 transform -translate-x-1/2 bg-red-100 text-red-800 px-4 py-2 rounded-lg shadow-lg text-sm font-medium transition-opacity duration-300 opacity-0 pointer-events-none z-50">
+            Bir hata oluştu. Lütfen tekrar deneyin.
+        </div>
+    </div>
+
+    <script>
+        // Set default date
+        document.getElementById('proposalDate').valueAsDate = new Date();
+
+        // TAB LOGIC
+        function switchTab(tab) {
+            document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+            event.target.classList.add('active');
+            
+            if (tab === 'arch') {
+                document.getElementById('tab-arch').classList.remove('hidden-tab');
+                document.getElementById('tab-proposal').classList.add('hidden-tab');
+                document.getElementById('submitArchBtn').classList.remove('hidden');
+                document.getElementById('submitProposalBtn').classList.add('hidden');
+                document.getElementById('submitProposalDocxBtn').classList.add('hidden');
+            } else {
+                document.getElementById('tab-arch').classList.add('hidden-tab');
+                document.getElementById('tab-proposal').classList.remove('hidden-tab');
+                document.getElementById('submitArchBtn').classList.add('hidden');
+                document.getElementById('submitProposalBtn').classList.remove('hidden');
+                document.getElementById('submitProposalDocxBtn').classList.remove('hidden');
+                // Generate table when switching to proposal tab
+                if (document.getElementById('proposalTbody').children.length === 0) {
+                    generateProposalTable();
+                }
+            }
+        }
+
+        // --- ARCHITECTURE LOGIC ---
+        const floorsContainer = document.getElementById('floorsContainer');
+        const basementsContainer = document.getElementById('basementsContainer');
+        const roofAreasContainer = document.getElementById('roofAreasContainer');
+        const previewContainer = document.getElementById('previewContainer');
+        
+        function buildDynamicFields() {
+            // Roof
+            const roofCount = parseInt(document.getElementById('roofAptCount').value) || 0;
+            let roofHtml = '';
+            for(let i=0; i<roofCount; i++) {
+                roofHtml += `<input type="number" class="roof-area form-trigger w-full px-2 py-1.5 border border-gray-300 rounded text-xs" value="50" min="1" placeholder="${i+1}. Alan (m2)">`;
+            }
+            if (roofAreasContainer.innerHTML.split('<input').length - 1 !== roofCount) {
+                roofAreasContainer.innerHTML = roofHtml;
+            }
+
+            // Floors
+            const floorCount = parseInt(document.getElementById('floorCount').value) || 0;
+            let currentFloors = floorsContainer.children.length;
+            
+            if (currentFloors !== floorCount) {
+                floorsContainer.innerHTML = '';
+                for(let i=1; i<=floorCount; i++) {
+                    let typeSelector = '';
+                    if (i === 1) {
+                        typeSelector = `
+                        <select class="floor-type form-trigger ml-2 px-1 py-0.5 border border-gray-300 rounded text-xs bg-white text-blue-800">
+                            <option value="Daire">Daire</option>
+                            <option value="Dükkan">Dükkan</option>
+                        </select>`;
+                    }
+                    floorsContainer.innerHTML += `
+                        <div class="bg-blue-50 p-3 rounded-lg border border-blue-100 floor-card" data-index="${i-1}">
+                            <div class="flex justify-between items-center mb-2">
+                                <span class="text-sm font-semibold text-blue-800 flex items-center">${i === 1 ? 'Zemin Kat' : i + '. Kat'}</span>
+                                <div class="flex items-center space-x-2 text-xs">
+                                    <label class="text-gray-600 floor-count-label">Bölüm Sayısı:</label>
+                                    <input type="number" class="floor-apt-count form-trigger w-16 px-2 py-1 border border-gray-300 rounded" value="2" min="1">
+                                </div>
+                            </div>
+                            <div class="grid grid-cols-3 gap-2 floor-areas-box"></div>
+                        </div>`;
+                }
+            }
+
+            // Basements
+            const basementCount = parseInt(document.getElementById('basementCount').value) || 0;
+            let currentBasements = basementsContainer.children.length;
+
+            if (currentBasements !== basementCount) {
+                basementsContainer.innerHTML = '';
+                for(let i=1; i<=basementCount; i++) {
+                    basementsContainer.innerHTML += `
+                        <div class="bg-gray-100 p-3 rounded-lg border border-gray-200 basement-card" data-index="${i-1}">
+                            <div class="flex justify-between items-center mb-2">
+                                <span class="text-sm font-semibold text-gray-700">Bodrum ${i}</span>
+                                <div class="flex items-center space-x-2 text-xs">
+                                    <label class="text-gray-600">Bölüm Sayısı:</label>
+                                    <input type="number" class="basement-apt-count form-trigger w-16 px-2 py-1 border border-gray-300 rounded" value="1" min="1">
+                                </div>
+                            </div>
+                            <div class="grid grid-cols-3 gap-2 basement-areas-box"></div>
+                        </div>`;
+                }
+            }
+
+            // Area inputs
+            document.querySelectorAll('.floor-card').forEach(card => {
+                const count = parseInt(card.querySelector('.floor-apt-count').value) || 1;
+                const isZemin = card.dataset.index === "0";
+                const type = isZemin ? 'Karma' : 'Daire'; // Zemin kat karma olabilir
+                const box = card.querySelector('.floor-areas-box');
+                const labelElement = card.querySelector('.floor-count-label');
+                
+                if (labelElement && !isZemin) {
+                    labelElement.innerText = 'Daire Sayısı:';
+                }
+
+                if (box.children.length !== count) {
+                    let html = '';
+                    for(let j=0; j<count; j++) {
+                        if (isZemin) {
+                            html += `<div class="flex items-center space-x-1 mb-1">
+                                <select class="floor-sec-type form-trigger w-1/2 px-1 py-1 border border-gray-300 rounded text-xs text-blue-800 bg-white">
+                                    <option value="Sığınak">Sığınak</option>
+                                    <option value="Dükkan" selected>Dükkan</option>
+                                    <option value="Bodrum">Bodrum</option>
+                                    <option value="Otopark">Otopark</option>
+                                    <option value="Daire">Daire</option>
+                                </select>
+                                <input type="number" class="floor-area form-trigger w-1/2 px-2 py-1 border border-gray-300 rounded text-xs" value="100" min="1" placeholder="${j+1}. Alan">
+                            </div>`;
+                        } else {
+                            html += `<input type="number" class="floor-area form-trigger w-full px-2 py-1 border border-gray-300 rounded text-xs mb-1" value="100" min="1" placeholder="${j+1}. ${type} m2">`;
+                        }
+                    }
+                    box.innerHTML = html;
+                }
+            });
+
+            document.querySelectorAll('.basement-card').forEach(card => {
+                const count = parseInt(card.querySelector('.basement-apt-count').value) || 1;
+                const box = card.querySelector('.basement-areas-box');
+                if (box.children.length !== count) {
+                    let html = '';
+                    for(let j=0; j<count; j++) {
+                        html += `<div class="flex items-center space-x-1 mb-1">
+                            <select class="basement-sec-type form-trigger w-1/2 px-1 py-1 border border-gray-300 rounded text-xs text-gray-700 bg-white">
+                                <option value="Sığınak">Sığınak</option>
+                                <option value="Dükkan">Dükkan</option>
+                                <option value="Bodrum">Bodrum</option>
+                                <option value="Otopark">Otopark</option>
+                                <option value="Daire">Daire</option>
+                            </select>
+                            <input type="number" class="basement-area form-trigger w-1/2 px-2 py-1 border border-gray-300 rounded text-xs" value="100" min="1" placeholder="${j+1}. Alan">
+                        </div>`;
+                    }
+                    box.innerHTML = html;
+                }
+            });
+        }
+
+        function extractPayload() {
+            const floors = [];
+            document.querySelectorAll('.floor-card').forEach(card => {
+                const isZemin = card.dataset.index === "0";
+                const areaInputs = Array.from(card.querySelectorAll('.floor-area'));
+                
+                const areas = areaInputs.map(input => {
+                    const areaVal = parseFloat(input.value) || 100;
+                    if (isZemin) {
+                        const typeSelect = input.previousElementSibling;
+                        return { area: areaVal, type: typeSelect ? typeSelect.value : 'Daire' };
+                    } else {
+                        return { area: areaVal, type: 'Daire' };
+                    }
+                });
+                floors.push({ type: isZemin ? 'Karma' : 'Daire', aptCount: areas.length, areas });
+            });
+
+            const basements = [];
+            document.querySelectorAll('.basement-card').forEach(card => {
+                const areaInputs = Array.from(card.querySelectorAll('.basement-area'));
+                const areas = areaInputs.map(input => {
+                    const areaVal = parseFloat(input.value) || 100;
+                    const typeSelect = input.previousElementSibling;
+                    return { area: areaVal, type: typeSelect ? typeSelect.value : 'Sığınak' };
+                });
+                basements.push({ sectionCount: areas.length, areas });
+            });
+
+            const roofAreas = Array.from(document.querySelectorAll('.roof-area')).map(i => parseFloat(i.value) || 50);
+
+            return {
+                roofType: document.getElementById('roofType').value,
+                floors: floors,
+                basements: basements,
+                roof: { aptCount: roofAreas.length, areas: roofAreas },
+                parkingCount: parseInt(document.getElementById('parkingCount').value) || 0,
+                parkingArea: parseFloat(document.getElementById('parkingArea').value) || 100,
+                isDuplex: document.getElementById('isDuplex').checked
+            };
+        }
+
+        let previewTimeout;
+        function renderPreview() {
+            buildDynamicFields();
+            const payload = extractPayload();
+            if (typeof window.generateDrawingSVG === 'function') {
+                const svgString = window.generateDrawingSVG(payload);
+                document.getElementById('previewContainer').innerHTML = svgString;
+            }
+        }
+
+        document.getElementById('formPanel').addEventListener('input', (e) => {
+            if (e.target.classList.contains('form-trigger') || e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT') {
+                clearTimeout(previewTimeout);
+                previewTimeout = setTimeout(() => renderPreview(), 50);
+            }
+        });
+
+        renderPreview(); // Init
+
+        // --- PROPOSAL LOGIC ---
+        function generateProposalTable() {
+            const payload = extractPayload();
+            const tbody = document.getElementById('proposalTbody');
+            tbody.innerHTML = '';
+            let globalBolumNo = 1;
+
+            // Bodrum katlardan Dükkan/Daire olanları bağımsız bölüm olarak ekle
+            payload.basements.forEach((basement, bIdx) => {
+                const katLabel = payload.basements.length > 1 ? `Bodrum Kat ${bIdx + 1}` : 'Bodrum Kat';
+                basement.areas.forEach(item => {
+                    const area = typeof item === 'object' ? item.area : item;
+                    const type = typeof item === 'object' ? item.type : 'Sığınak';
+                    // Sadece Dükkan veya Daire ise bağımsız bölüm satırı ekle
+                    if (type === 'Dükkan' || type === 'Daire') {
+                        const rowNitelik = `${katLabel} (${type})`;
+                        tbody.innerHTML += createProposalRow(rowNitelik, globalBolumNo++, area);
+                    }
+                });
+            });
+
+            // Normal katlar
+            payload.floors.forEach((floor, idx) => {
+                const katName = idx === 0 ? 'Zemin Kat' : `${idx}. Kat`;
+                floor.areas.forEach(item => {
+                    const area = typeof item === 'object' ? item.area : item;
+                    const type = typeof item === 'object' ? item.type : floor.type;
+                    const rowNitelik = (idx === 0 && type === 'Dükkan') ? 'Zemin Kat (Dükkan)' : katName;
+                    tbody.innerHTML += createProposalRow(rowNitelik, globalBolumNo++, area);
+                });
+            });
+
+            // Çatı katı
+            if (payload.roof && payload.roof.areas.length > 0) {
+                payload.roof.areas.forEach(area => {
+                    tbody.innerHTML += createProposalRow('Çatı Katı', globalBolumNo++, area);
+                });
+            }
+
+            calculateProposalTable();
+        }
+
+        function createProposalRow(katName, bolumNo, brutAlan) {
+            return `
+            <tr class="prop-row hover:bg-gray-50 transition">
+                <td class="px-3 py-2 border-b"><input type="text" class="prop-kat w-full bg-transparent outline-none" value="${katName}" readonly></td>
+                <td class="px-3 py-2 border-b"><input type="number" class="prop-no w-full px-1 border border-gray-300 rounded" value="${bolumNo}"></td>
+                <td class="px-3 py-2 border-b"><input type="number" class="prop-brut w-full px-2 py-1 border border-gray-300 rounded" value="${brutAlan}" oninput="calculateProposalTable()"></td>
+                <td class="px-3 py-2 border-b"><input type="number" class="prop-bodrum w-full px-2 py-1 border border-gray-300 rounded" value="0" oninput="calculateProposalTable()"></td>
+                <td class="px-3 py-2 border-b bg-blue-50"><span class="prop-toplam-brut font-semibold text-blue-700">0</span></td>
+                <td class="px-3 py-2 border-b"><span class="prop-bedel font-medium">0</span> TL</td>
+                <td class="px-3 py-2 border-b"><span class="prop-bodrum-bedel font-medium">0</span> TL</td>
+                <td class="px-3 py-2 border-b bg-green-50"><span class="prop-toplam-insaat-bedeli font-semibold text-green-700">0</span> TL</td>
+                <td class="px-3 py-2 border-b"><input type="number" class="prop-destek w-full px-2 py-1 border border-gray-300 rounded" value="1750000" oninput="calculateProposalTable()"></td>
+                <td class="px-3 py-2 border-b"><span class="prop-odenecek font-semibold text-blue-600">0</span> TL</td>
+            </tr>`;
+        }
+
+        function calculateProposalTable() {
+            const daireUnitPrice = parseFloat(document.getElementById('daireUnitPrice').value) || 0;
+            const dukkanUnitPrice = parseFloat(document.getElementById('dukkanUnitPrice').value) || 0;
+            const bodrumUnitPrice = parseFloat(document.getElementById('bodrumUnitPrice').value) || 0;
+            const otoparkUnitPrice = parseFloat(document.getElementById('otoparkUnitPrice').value) || 0;
+
+            const vatRate = parseFloat(document.getElementById('vatRate').value) || 0;
+            
+            let totBrut = 0, totBodrum = 0, totToplamBrut = 0, totBedel = 0, totBodrumBedelTablo = 0, totToplamInsaatBedeli = 0, totDestek = 0, totOdenecek = 0;
+
+            document.querySelectorAll('.prop-row').forEach(row => {
+                const katName = row.querySelector('.prop-kat').value || '';
+                const brut = parseFloat(row.querySelector('.prop-brut').value) || 0;
+                const bodrum = parseFloat(row.querySelector('.prop-bodrum').value) || 0;
+                const destek = parseFloat(row.querySelector('.prop-destek').value) || 0;
+
+                let brutPrice = daireUnitPrice;
+                if (katName.includes('Dükkan')) brutPrice = dukkanUnitPrice;
+
+                // Sadece brüt alan fiyatı tablodaki "İnşaat Bedeli" sütununa yansır
+                const bedel = (brut * brutPrice);
+                const bodrumBedeliRow = (bodrum * bodrumUnitPrice);
+                const toplamBrut = brut + bodrum;
+                const toplamInsaatBedeli = bedel + bodrumBedeliRow;
+                const odenecek = toplamInsaatBedeli - destek;
+
+                row.querySelector('.prop-toplam-brut').innerText = toplamBrut.toLocaleString('tr-TR');
+                row.querySelector('.prop-bedel').innerText = bedel.toLocaleString('tr-TR');
+                row.querySelector('.prop-bodrum-bedel').innerText = bodrumBedeliRow.toLocaleString('tr-TR');
+                row.querySelector('.prop-toplam-insaat-bedeli').innerText = toplamInsaatBedeli.toLocaleString('tr-TR');
+                row.querySelector('.prop-odenecek').innerText = odenecek.toLocaleString('tr-TR');
+
+                totBrut += brut;
+                totBodrum += bodrum;
+                totToplamBrut += toplamBrut;
+                totBedel += bedel;
+                totBodrumBedelTablo += bodrumBedeliRow;
+                totToplamInsaatBedeli += toplamInsaatBedeli;
+                totDestek += destek;
+                totOdenecek += odenecek;
+            });
+
+            // Update footers
+            document.getElementById('totBrut').innerText = totBrut;
+            document.getElementById('totBodrum').innerText = totBodrum;
+            document.getElementById('totToplamBrut').innerText = totToplamBrut.toLocaleString('tr-TR');
+            document.getElementById('totBedel').innerText = totBedel.toLocaleString('tr-TR') + ' TL';
+            document.getElementById('totBodrumBedelTablo').innerText = totBodrumBedelTablo.toLocaleString('tr-TR') + ' TL';
+            document.getElementById('totToplamInsaatBedeli').innerText = totToplamInsaatBedeli.toLocaleString('tr-TR') + ' TL';
+            document.getElementById('totDestek').innerText = totDestek.toLocaleString('tr-TR') + ' TL';
+            document.getElementById('totOdenecek').innerText = totOdenecek.toLocaleString('tr-TR') + ' TL';
+
+            // Calculate extra totals
+            const totalSiganakBedel = totBodrumBedelTablo;
+            const parkingCount = parseInt(document.getElementById('parkingCount').value) || 0;
+            const parkingArea = parseFloat(document.getElementById('parkingArea').value) || 100;
+            const totalOtoparkBedel = (parkingCount * parkingArea) * otoparkUnitPrice;
+
+            // araToplam = totOdenecek (zaten bodrum bedeli dahil) + totalOtoparkBedel
+            const araToplam = totOdenecek + totalOtoparkBedel;
+
+            // Summary box
+            let vatAmount = 0;
+            let vatValText = '';
+            if (vatRate === -1) {
+                vatValText = 'KDV DAHİL';
+            } else {
+                vatAmount = araToplam * (vatRate / 100);
+                vatValText = vatAmount.toLocaleString('tr-TR') + ' TL';
+            }
+            const grandTotal = araToplam + vatAmount;
+
+            document.getElementById('subTotalSpan').innerText = totOdenecek.toLocaleString('tr-TR') + ' TL';
+            document.getElementById('otoparkTotalSpan').innerText = totalOtoparkBedel.toLocaleString('tr-TR') + ' TL';
+            document.getElementById('araToplamSpan').innerText = araToplam.toLocaleString('tr-TR') + ' TL';
+            document.getElementById('vatTotalSpan').innerText = vatValText;
+            document.getElementById('grandTotalSpan').innerText = grandTotal.toLocaleString('tr-TR') + ' TL';
+        }
+
+        // --- SUBMIT LOGIC ---
+        async function handlePdfSubmit(type) {
+            const isArch = type === 'arch';
+            const isDocx = type === 'proposal-docx';
+            let btn;
+            if (isArch) btn = document.getElementById('submitArchBtn');
+            else if (isDocx) btn = document.getElementById('submitProposalDocxBtn');
+            else btn = document.getElementById('submitProposalBtn');
+            const statusMsg = document.getElementById('statusMessage');
+            const errorMsg = document.getElementById('errorMessage');
+            
+            const originalBtnHtml = btn.innerHTML;
+            btn.disabled = true;
+            btn.innerHTML = '<svg class="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> Oluşturuluyor...';
+            statusMsg.style.opacity = '0';
+            errorMsg.style.opacity = '0';
+
+            let url = '';
+            let requestBody = {};
+
+            if (isArch) {
+                url = '/api/generate-pdf';
+                requestBody = extractPayload();
+            } else {
+                url = isDocx ? '/api/generate-proposal-docx' : '/api/generate-proposal';
+                // Gather proposal data
+                const rows = [];
+                document.querySelectorAll('.prop-row').forEach(row => {
+                    rows.push({
+                        kat: row.querySelector('.prop-kat').value,
+                        no: row.querySelector('.prop-no').value,
+                        brut: parseFloat(row.querySelector('.prop-brut').value) || 0,
+                        bodrum: parseFloat(row.querySelector('.prop-bodrum').value) || 0,
+                        bedel: parseFloat(row.querySelector('.prop-bedel').innerText.replace(/\./g, '').replace(',','.')) || 0,
+                        bodrumBedel: parseFloat(row.querySelector('.prop-bodrum-bedel').innerText.replace(/\./g, '').replace(',','.')) || 0,
+                        destek: parseFloat(row.querySelector('.prop-destek').value) || 0,
+                        odenecek: parseFloat(row.querySelector('.prop-odenecek').innerText.replace(/\./g, '').replace(',','.')) || 0
+                    });
+                });
+                requestBody = {
+                    customerName: document.getElementById('customerName').value || 'Belirtilmedi',
+                    projectName: document.getElementById('projectName').value || 'Belirtilmedi',
+                    date: document.getElementById('proposalDate').value,
+                    unitPrices: {
+                        daire: parseFloat(document.getElementById('daireUnitPrice').value) || 0,
+                        dukkan: parseFloat(document.getElementById('dukkanUnitPrice').value) || 0,
+                        bodrum: parseFloat(document.getElementById('bodrumUnitPrice').value) || 0,
+                        otopark: parseFloat(document.getElementById('otoparkUnitPrice').value) || 0
+                    },
+                    vatRate: parseFloat(document.getElementById('vatRate').value),
+                    contractInfo: {
+                        ilce: document.getElementById('propIlce').value || '.......',
+                        ada: document.getElementById('propAda').value || '.......',
+                        parsel: document.getElementById('propParsel').value || '.......',
+                        teslimTuru: document.getElementById('propTeslim').value || 'ANAHTAR TESLİM',
+                        insaatSure: document.getElementById('propInsaatSure').value || '.......',
+                        ruhsatSure: document.getElementById('propRuhsatSure').value || '.......',
+                        ceza: document.getElementById('propCeza').value || '.......'
+                    },
+                    paymentInfo: {
+                        taksitSayisi: document.getElementById('propTaksitSayisi').value || '6',
+                        kampanyaTuru: document.getElementById('propKampanyaTuru').value || 'Yarısı Bizden',
+                        ilkTaksitGun: document.getElementById('propIlkTaksitGun').value || '3',
+                        taksitHaftasi: document.getElementById('propTaksitHaftasi').value || 'ilk'
+                    },
+                    rows: rows,
+                    archData: extractPayload()
+                };
+            }
+
+            try {
+                const response = await fetch(url, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(requestBody)
+                });
+
+                if (!response.ok) throw new Error('Network response was not ok');
+
+                const blob = await response.blob();
+                const objUrl = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = objUrl;
+                
+                let filename = isArch ? 'mimari_cizim.pdf' : (isDocx ? 'fiyat_teklifi.docx' : 'fiyat_teklifi.pdf');
+                const disposition = response.headers.get('Content-Disposition');
+                if (disposition) {
+                    const utf8Match = disposition.match(/filename\*=UTF-8''([^;]+)/i);
+                    const asciiMatch = disposition.match(/filename="([^"]+)"/i);
+                    if (utf8Match && utf8Match[1]) {
+                        filename = decodeURIComponent(utf8Match[1]);
+                    } else if (asciiMatch && asciiMatch[1]) {
+                        filename = decodeURIComponent(asciiMatch[1]);
+                    }
+                }
+                
+                a.download = filename;
+                document.body.appendChild(a);
+                a.click();
+                a.remove();
+                window.URL.revokeObjectURL(objUrl);
+
+                statusMsg.style.opacity = '1';
+                setTimeout(() => statusMsg.style.opacity = '0', 3000);
+            } catch (error) {
+                console.error(error);
+                errorMsg.style.opacity = '1';
+                setTimeout(() => errorMsg.style.opacity = '0', 3000);
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = originalBtnHtml;
+            }
+        }
+
+        document.getElementById('submitArchBtn').addEventListener('click', () => handlePdfSubmit('arch'));
+        document.getElementById('submitProposalBtn').addEventListener('click', () => handlePdfSubmit('proposal'));
+        document.getElementById('submitProposalDocxBtn').addEventListener('click', () => handlePdfSubmit('proposal-docx'));
+
+    </script>
+</body>
+</html>
